@@ -25,7 +25,13 @@ const boss = {
     stateTimer: 0,
     projectiles: [],
     adds: [],
+    path: [],
+    pathIndex: 0,
+    pathTimer: 0,
 };
+
+const BOSS_MOVE_SPEED = 62;
+const BOSS_STOP_DISTANCE = 55;
 
 let bossDefeatedEver = false;
 
@@ -46,6 +52,9 @@ function resetBossEncounter() {
     boss.stateTimer = 0;
     boss.projectiles = [];
     boss.adds = [];
+    boss.path = [];
+    boss.pathIndex = 0;
+    boss.pathTimer = 0;
 }
 
 let nearbyAltar = null;
@@ -112,8 +121,16 @@ function updateBoss(dt) {
 
     if (boss.contactTimer > 0) boss.contactTimer -= dt;
     if (rectsOverlap(boss, player) && boss.contactTimer <= 0) {
-        damagePlayer(Math.round(BOSS_DEF.contactDamage * getDifficultyMods().enemyDamageMult));
+        damagePlayer(Math.round(BOSS_DEF.contactDamage * getDifficultyMods().enemyDamageMult * levelScalingMult()));
         boss.contactTimer = 0.5;
+    }
+
+    if (boss.state === "cooldown" || boss.state === "telegraph") {
+        const bcx = boss.x + boss.w / 2, bcy = boss.y + boss.h / 2;
+        const pcx = player.x + player.w / 2, pcy = player.y + player.h / 2;
+        if (Math.hypot(pcx - bcx, pcy - bcy) > BOSS_STOP_DISTANCE) {
+            runPathTowards(boss, dt, toTile(player.x, player.y, player.w, player.h), BOSS_MOVE_SPEED);
+        }
     }
 
     boss.stateTimer -= dt;
@@ -139,7 +156,7 @@ function executePattern(pattern) {
 
     if (pattern === "melee") {
         if (Math.hypot(pcx - bcx, pcy - bcy) <= 70) {
-            damagePlayer(Math.round(16 * getDifficultyMods().enemyDamageMult));
+            damagePlayer(Math.round(16 * getDifficultyMods().enemyDamageMult * levelScalingMult()));
             spawnDamagePopup(pcx, pcy - 14, "SLAM!", "#e06a6a");
             if (typeof triggerShake === "function") triggerShake(9, 0.3);
             if (typeof triggerHitStop === "function") triggerHitStop(0.08);
@@ -170,7 +187,7 @@ function updateBossProjectiles(dt) {
         p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
 
         if (rectsOverlap({ x: p.x - 5, y: p.y - 5, w: 10, h: 10 }, player)) {
-            damagePlayer(Math.round(9 * getDifficultyMods().enemyDamageMult));
+            damagePlayer(Math.round(9 * getDifficultyMods().enemyDamageMult * levelScalingMult()));
             boss.projectiles.splice(i, 1);
             continue;
         }
@@ -191,7 +208,7 @@ function updateBossAdds(dt) {
         add.x += (dx / dist) * step;
         add.y += (dy / dist) * step;
 
-        if (rectsOverlap(add, player)) damagePlayer(Math.round(4 * getDifficultyMods().enemyDamageMult));
+        if (rectsOverlap(add, player)) damagePlayer(Math.round(4 * getDifficultyMods().enemyDamageMult * levelScalingMult()));
     }
 }
 

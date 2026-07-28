@@ -419,13 +419,23 @@ function drawHud(ctx) {
 
 //toast notification
 const toastEl = document.getElementById("pickupToast");
-let toastTimer = null;
+const MAX_TOASTS = 6;
 
 function showToast(msg) {
-    toastEl.textContent = msg;
-    toastEl.classList.add("show");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1800);
+    const el = document.createElement("div");
+    el.className = "toast-item";
+    el.textContent = msg;
+    toastEl.appendChild(el);
+
+    while (toastEl.children.length > MAX_TOASTS) {
+        toastEl.removeChild(toastEl.firstChild);
+    }
+
+    requestAnimationFrame(() => el.classList.add("show"));
+    setTimeout(() => {
+        el.classList.remove("show");
+        setTimeout(() => el.remove(), 300);
+    }, 1800);
 }
 
 //inventory ui

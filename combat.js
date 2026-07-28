@@ -114,6 +114,10 @@ function getDifficultyMods() {
     return { enemyDamageMult: 1, enemyHpMult: 1, playerDamageMult: 1 };
 }
 
+function levelScalingMult() {
+    const lvl = (typeof player !== "undefined" && player.level) || 1;
+    return Math.min(1.9, 1 + (lvl - 1) * 0.06);
+}
 const DEFENSE_CONSTANT = 8;
 
 function computeDamage(rawAttack, defense, mult = 1) {
@@ -288,7 +292,6 @@ function damagePlayer(amount) {
 function respawnPlayer() {
     if (typeof triggerGameOver === "function") { triggerGameOver(); return; }
 
-
     showToast("You were overwhelmed by the thorns... you wake up back near where you started.");
     player.x = map.spawn.x * TILE_SIZE + 4;
     player.y = map.spawn.y * TILE_SIZE + 4;
@@ -333,7 +336,7 @@ function updateEnemies(dt) {
                 }
 
         if (rectsOverlap(enemy, player)) {
-            damagePlayer(Math.round(enemy.def.attack * getDifficultyMods().enemyDamageMult));
+            damagePlayer(Math.round(enemy.def.attack * getDifficultyMods().enemyDamageMult * levelScalingMult()));
         }
     }
 }
