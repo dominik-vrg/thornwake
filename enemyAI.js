@@ -16,6 +16,8 @@ function toTile(x, y, w, h) {
 }
 
 function updateEnemyAI(enemy, dt) {
+    if (enemy.aggroCooldown > 0) enemy.aggroCooldown -= dt;
+
     const pcx = player.x + player.w / 2, pcy = player.y + player.h / 2;
     const ecx = enemy.x + enemy.w / 2, ecy = enemy.y + enemy.h / 2;
     const distToPlayer = Math.hypot(pcx - ecx, pcy - ecy);
@@ -27,7 +29,7 @@ function updateEnemyAI(enemy, dt) {
         if (distToPlayer > CHASE_GIVEUP_RADIUS || distFromSpawn > MAX_CHASE_TILES * TILE_SIZE) {
             enterReturn(enemy);
         }
-    } else if (enemy.aiState === "return" && distToPlayer <= DETECTION_RADIUS) {
+    } else if (enemy.aiState === "return" && enemy.aggroCooldown <= 0 && distToPlayer <= DETECTION_RADIUS) {
         enterChase(enemy);
     }
 
@@ -57,6 +59,7 @@ function enterReturn(enemy) {
     enemy.pathTimer = 0;
     enemy.path = [];
     enemy.pathIndex = 0;
+    enemy.aggroCooldown = 1.2;
 }
 
 function enterWander(enemy) {
@@ -77,7 +80,14 @@ function runPathTowards(enemy, dt, destTile, speed, arrivalPx = WAYPOINT_ARRIVAL
 
     if (enemy.path.length === 0) {
         const dc = tileCenter(destTile.col, destTile.row);
-        return Math.hypot((enemy.x + enemy.w / 2) - dc.x, (enemy.y + enemy.h / 2) - dc.y) <= arrivalPx * 4;
+        const ddx = dc.x - (enemy.x + enemy.w / 2);
+        const ddy = dc.y - (enemy.y + enemy.h / 2);
+        const ddist = Math.hypot(ddx, ddy);
+        if (ddist <= arrivalPx * 4) return true;
+
+        const dstep = (speed * dt) / ddist;
+        moveWithCollision(map, enemy, ddx * dstep, ddy * dstep);
+        return false;
     }
 
     if (enemy.pathIndex >= enemy.path.length) return true;
@@ -101,12 +111,19 @@ function runPathTowards(enemy, dt, destTile, speed, arrivalPx = WAYPOINT_ARRIVAL
 
 //idle wander
 function pickWanderTarget(enemy) {
+    const startTile = toTile(enemy.x, enemy.y, enemy.w, enemy.h);
     for (let attempt = 0; attempt < 8; attempt++) {
         const angle = Math.random() * Math.PI * 2;
         const dist = Math.random() * enemy.def.leashRadius;
         const tx = enemy.spawnX + Math.cos(angle) * dist;
         const ty = enemy.spawnY + Math.sin(angle) * dist;
-        if (!rectCollidesWithMap(map, tx, ty, enemy.w, enemy.h)) {
+        if (rectCollidesWithMap(map, tx, ty, enemy.w, enemy.h)) continue;
+
+        const targetTile = toTile(tx, ty, enemy.w, enemy.h);
+        if (targetTile.col === startTile.col && targetTile.row === startTile.row) {
+            return { x: tx, y: ty };
+        }
+        if (findPath(map, startTile.col, startTile.row, targetTile.col, targetTile.row, 400)) {
             return { x: tx, y: ty };
         }
     }
@@ -119,19 +136,18 @@ function runWander(enemy, dt) {
         if (enemy.wanderTimer <= 0) {
             enemy.wanderTarget = pickWanderTarget(enemy);
             enemy.wanderState = "moving";
-            enemy.wanderTimer = 3 + Math.random() * 2;
+            enemy.wanderTimer = 5 + Math.random() * 3;
+            enemy.path = [];
+            enemy.pathIndex = 0;
+            enemy.pathTimer = 0;
         }
         return;
     }
 
-    const dx = enemy.wanderTarget.x - enemy.x;
-    const dy = enemy.wanderTarget.y - enemy.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist < 3 || enemy.wanderTimer <= 0) {
+    const targetTile = toTile(enemy.wanderTarget.x, enemy.wanderTarget.y, enemy.w, enemy.h);
+    const arrived = runPathTowards(enemy, dt, targetTile, enemy.def.wanderSpeed, WAYPOINT_ARRIVAL_PX);
+    if (arrived || enemy.wanderTimer <= 0) {
         enemy.wanderState = "idle";
         enemy.wanderTimer = 1.5 + Math.random() * 2.5;
-    } else {
-        const step = (enemy.def.wanderSpeed * dt) / dist;
-        moveWithCollision(map, enemy, dx * step, dy * step);
     }
 }

@@ -54,7 +54,7 @@ function recalcPlayerStats() {
         const id = equipment[slot];
         if (!id) continue;
         const def = ITEM_DEFS[id];
-        if (!def.stats) continue;
+        if (!def || !def.stats) continue;
         attack += def.stats.attack || 0;
         defense += def.stats.defense || 0;
         speed += def.stats.speed || 0;
@@ -401,8 +401,9 @@ function drawHud(ctx) {
     let iconX = innerX;
     for (const slot of SLOT_ORDER) {
         const id = equipment[slot];
-        ctx.globalAlpha = id ? 1 : 0.25;
-        ctx.fillText(id ? ITEM_DEFS[id].icon : EQUIP_SLOT_DEFS[slot].placeholder, iconX, cursorY);
+        const iconDef = id ? ITEM_DEFS[id] : null;
+        ctx.globalAlpha = iconDef ? 1 : 0.25;
+        ctx.fillText(iconDef ? iconDef.icon : EQUIP_SLOT_DEFS[slot].placeholder, iconX, cursorY);
         iconX += 20;
     }
     ctx.globalAlpha = 1;
@@ -419,13 +420,24 @@ function drawHud(ctx) {
 
 //toast notification
 const toastEl = document.getElementById("pickupToast");
-let toastTimer = null;
+const MAX_TOASTS = 6;
 
 function showToast(msg) {
-    toastEl.textContent = msg;
-    toastEl.classList.add("show");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1800);
+    const el = document.createElement("div");
+    el.className = "toast-item";
+    el.textContent = msg;
+    toastEl.appendChild(el);
+
+    //trim oldest if too many are stacked up at once
+    while (toastEl.children.length > MAX_TOASTS) {
+        toastEl.removeChild(toastEl.firstChild);
+    }
+
+    requestAnimationFrame(() => el.classList.add("show"));
+    setTimeout(() => {
+        el.classList.remove("show");
+        setTimeout(() => el.remove(), 300);
+    }, 1800);
 }
 
 //inventory ui

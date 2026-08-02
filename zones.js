@@ -27,7 +27,7 @@ function buildGroveEdgeMap() {
 }
 
 function buildHollowMap() {
-    const cols = 26, rows = 16;
+    const cols = 26, rows = 17;
     const tiles = new Array(cols * rows).fill(TILE.WALL);
     const at = (c, r) => r * cols + c;
 
@@ -45,7 +45,7 @@ function buildHollowMap() {
 }
 
 function buildBossArenaMap() {
-    const cols = 17, rows = 13;
+    const cols = 23, rows = 15;
     const tiles = new Array(cols * rows).fill(TILE.WALL);
 
     carveRect(tiles, cols, 2, 2, 13, 9, TILE.GRASS);

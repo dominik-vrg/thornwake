@@ -68,26 +68,34 @@ canvas {
     position: relative;
 }
 
-.toast {
+.toast-stack {
     position: absolute;
     bottom: 14px;
     left: 50%;
-    transform: translateX(-50%) translateY(10px);
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 6px;
+    pointer-events: none;
+}
+
+.toast-item {
     background: rgba(20, 16, 15, 0.92);
     border: 1px solid var(--accent);
     color: var(--ink);
     padding: 6px 14px;
     border-radius: 20px;
     font-size: 12px;
-    opacity: 0;
-    transition: opacity 0.25s, transform 0.25s;
-    pointer-events: none;
     white-space: nowrap;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.25s, transform 0.25s;
 }
 
-.toast.show {
+.toast-item.show {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
 }
 
 .inv-overlay {

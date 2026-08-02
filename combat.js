@@ -114,6 +114,10 @@ function getDifficultyMods() {
     return { enemyDamageMult: 1, enemyHpMult: 1, playerDamageMult: 1 };
 }
 
+function levelScalingMult() {
+    const lvl = (typeof player !== "undefined" && player.level) || 1;
+    return Math.min(1.9, 1 + (lvl - 1) * 0.06);
+}
 const DEFENSE_CONSTANT = 8;
 
 function computeDamage(rawAttack, defense, mult = 1) {
@@ -144,6 +148,7 @@ function buildEnemiesFromSpawns(spawns) {
             wanderTimer: 1 + Math.random() * 2,
             wanderTarget: null,
             aiState: "wander",
+            aggroCooldown: 0,
             path: [],
             pathIndex: 0,
             pathTimer: 0,
@@ -333,7 +338,7 @@ function updateEnemies(dt) {
                 }
 
         if (rectsOverlap(enemy, player)) {
-            damagePlayer(Math.round(enemy.def.attack * getDifficultyMods().enemyDamageMult));
+            damagePlayer(Math.round(enemy.def.attack * getDifficultyMods().enemyDamageMult * levelScalingMult()));
         }
     }
 }

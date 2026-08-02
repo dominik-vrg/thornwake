@@ -5,11 +5,11 @@ const BOSS_DEF = {
     icon: "🌹",
     color: "#7a1f3d",
     flashColor: "#e0a3c0",
-    maxHp: 260,
-    contactDamage: 10,
-    defense: 4,
+    maxHp: 400,
+    contactDamage: 16,
+    defense: 8,
     w: 56, h: 56,
-    xpReward: 150,
+    xpReward: 180,
 };
 
 const boss = {
@@ -25,7 +25,13 @@ const boss = {
     stateTimer: 0,
     projectiles: [],
     adds: [],
+    path: [],
+    pathIndex: 0,
+    pathTimer: 0,
 };
+
+const BOSS_MOVE_SPEED = 72;
+const BOSS_STOP_DISTANCE = 55;
 
 let bossDefeatedEver = false;
 
@@ -46,6 +52,9 @@ function resetBossEncounter() {
     boss.stateTimer = 0;
     boss.projectiles = [];
     boss.adds = [];
+    boss.path = [];
+    boss.pathIndex = 0;
+    boss.pathTimer = 0;
 }
 
 let nearbyAltar = null;
@@ -97,9 +106,9 @@ function pickNextPattern() {
 
 function bossCooldownDuration() {
     const ratio = boss.hp / boss.maxHp;
-    const base = 1.6;
-    if (ratio < 0.3) return base * 0.5;
-    if (ratio < 0.6) return base * 0.75;
+    const base = 1.3;
+    if (ratio < 0.3) return base * 0.45;
+    if (ratio < 0.6) return base * 0.7;
     return base;
 }
 
@@ -112,7 +121,7 @@ function updateBoss(dt) {
 
     if (boss.contactTimer > 0) boss.contactTimer -= dt;
     if (rectsOverlap(boss, player) && boss.contactTimer <= 0) {
-        damagePlayer(Math.round(BOSS_DEF.contactDamage * getDifficultyMods().enemyDamageMult));
+        damagePlayer(Math.round(BOSS_DEF.contactDamage * getDifficultyMods().enemyDamageMult * levelScalingMult()));
         boss.contactTimer = 0.5;
     }
 
@@ -128,7 +137,7 @@ function updateBoss(dt) {
     } else if (boss.state === "cooldown" && boss.stateTimer <= 0) {
         boss.pattern = pickNextPattern();
         boss.state = "telegraph";
-        boss.stateTimer = boss.pattern === "ranged" ? 0.5 : boss.pattern === "summon" ? 0.6 : 0.7;
+        boss.stateTimer = boss.pattern === "ranged" ? 0.4 : boss.pattern === "summon" ? 0.5 : 0.55;
         if (typeof playSfx === "function") playSfx("bossTelegraph");
     }
 }
@@ -139,7 +148,7 @@ function executePattern(pattern) {
 
     if (pattern === "melee") {
         if (Math.hypot(pcx - bcx, pcy - bcy) <= 70) {
-            damagePlayer(Math.round(16 * getDifficultyMods().enemyDamageMult));
+            damagePlayer(Math.round(22 * getDifficultyMods().enemyDamageMult * levelScalingMult()));
             spawnDamagePopup(pcx, pcy - 14, "SLAM!", "#e06a6a");
             if (typeof triggerShake === "function") triggerShake(9, 0.3);
             if (typeof triggerHitStop === "function") triggerHitStop(0.08);
@@ -170,7 +179,7 @@ function updateBossProjectiles(dt) {
         p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
 
         if (rectsOverlap({ x: p.x - 5, y: p.y - 5, w: 10, h: 10 }, player)) {
-            damagePlayer(Math.round(9 * getDifficultyMods().enemyDamageMult));
+            damagePlayer(Math.round(12 * getDifficultyMods().enemyDamageMult * levelScalingMult()));
             boss.projectiles.splice(i, 1);
             continue;
         }
@@ -191,7 +200,7 @@ function updateBossAdds(dt) {
         add.x += (dx / dist) * step;
         add.y += (dy / dist) * step;
 
-        if (rectsOverlap(add, player)) damagePlayer(Math.round(4 * getDifficultyMods().enemyDamageMult));
+        if (rectsOverlap(add, player)) damagePlayer(Math.round(4 * getDifficultyMods().enemyDamageMult * levelScalingMult()));
     }
 }
 

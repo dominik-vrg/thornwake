@@ -107,47 +107,54 @@ function loadGame() {
     }
     if (!data || data.version !== 1) return false;
 
-    if (data.difficulty && typeof DIFFICULTIES !== "undefined" && DIFFICULTIES[data.difficulty]) {
-        currentDifficulty = data.difficulty;
+    try {
+        if (data.difficulty && typeof DIFFICULTIES !== "undefined" && DIFFICULTIES[data.difficulty]) {
+            currentDifficulty = data.difficulty;
+        }
+
+        player.level = data.player.level || 1;
+        player.xp = data.player.xp || 0;
+        player.perks = new Set(data.player.perks || []);
+        player.facing = data.player.facing || "down";
+
+        for (let i = 0; i < inventory.length; i++) {
+            const saved = data.inventory && data.inventory[i];
+            inventory[i] = saved ? { id: saved.id, qty: saved.qty } : null;
+        }
+
+        for (const slot of SLOT_ORDER) {
+            equipment[slot] = (data.equipment && data.equipment[slot]) || null;
+        }
+
+        journal.quests = (data.journal && data.journal.quests) ? data.journal.quests.map((q) => ({ ...q })) : [];
+        journal.lore = (data.journal && data.journal.lore) ? data.journal.lore.map((l) => ({ ...l })) : [];
+
+        bossDefeatedEver = !!data.bossDefeatedEver;
+        aldricMet = !!data.aldricMet;
+
+        if (typeof applyDifficultyToWorld === "function") applyDifficultyToWorld();
+
+        for (const zoneId of Object.keys(data.zones || {})) {
+            applyZoneState(zoneId, data.zones[zoneId]);
+        }
+
+        recalcPlayerStats();
+        player.hp = Math.min(data.player.hp != null ? data.player.hp : player.maxHp, player.maxHp);
+
+        enterZone(data.currentZoneId || "village", true);
+        player.x = data.player.x != null ? data.player.x : player.x;
+        player.y = data.player.y != null ? data.player.y : player.y;
+        updateCamera();
+
+        if (typeof toggleMute === "function") toggleMute(!!data.audioMuted);
+
+        return true;
+    } catch (err) {
+        console.warn("Thornwake: save failed to load cleanly, resetting to a safe state.", err);
+        try { enterZone("village"); } catch (err2) {}
+        deleteSave();
+        return false;
     }
-
-    player.level = data.player.level || 1;
-    player.xp = data.player.xp || 0;
-    player.perks = new Set(data.player.perks || []);
-    player.facing = data.player.facing || "down";
-
-    for (let i = 0; i < inventory.length; i++) {
-        const saved = data.inventory && data.inventory[i];
-        inventory[i] = saved ? { id: saved.id, qty: saved.qty } : null;
-    }
-
-    for (const slot of SLOT_ORDER) {
-        equipment[slot] = (data.equipment && data.equipment[slot]) || null;
-    }
-
-    journal.quests = (data.journal && data.journal.quests) ? data.journal.quests.map((q) => ({ ...q })) : [];
-    journal.lore = (data.journal && data.journal.lore) ? data.journal.lore.map((l) => ({ ...l })) : [];
-
-    bossDefeatedEver = !!data.bossDefeatedEver;
-    aldricMet = !!data.aldricMet;
-
-    if (typeof applyDifficultyToWorld === "function") applyDifficultyToWorld();
-
-    for (const zoneId of Object.keys(data.zones || {})) {
-        applyZoneState(zoneId, data.zones[zoneId]);
-    }
-
-    recalcPlayerStats();
-    player.hp = Math.min(data.player.hp != null ? data.player.hp : player.maxHp, player.maxHp);
-
-    enterZone(data.currentZoneId || "village", true);
-    player.x = data.player.x != null ? data.player.x : player.x;
-    player.y = data.player.y != null ? data.player.y : player.y;
-    updateCamera();
-
-    if (typeof toggleMute === "function") toggleMute(!!data.audioMuted);
-
-    return true;
 }
 
 function startAutosave() {

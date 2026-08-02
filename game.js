@@ -303,34 +303,17 @@ function readMovementInput() {
         const inv = 1 / Math.sqrt(2);
         dx *= inv; dy *= inv;
     }
-
+    if (dy < 0) player.facing = "up";
+    else if (dy > 0) player.facing = "down";
+    else if (dx < 0) player.facing = "left";
+    else if (dx > 0) player.facing = "right";
+    
     return { dx, dy };
 }
 
 //render
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-
-let mouseX = VIEW_W / 2, mouseY = VIEW_H / 2;
-
-canvas.addEventListener("mousemove", (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    mouseX = (e.clientX - rect.left) * scaleX;
-    mouseY = (e.clientY - rect.top) * scaleY;
-});
-
-function updateFacingToCursor() {
-    const screenX = player.x - camera.x + player.w / 2;
-    const screenY = player.y - camera.y + player.h / 2;
-    const dx = mouseX - screenX, dy = mouseY - screenY;
-
-    if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
-
-    if (Math.abs(dx) > Math.abs(dy)) player.facing = dx > 0 ? "right" : "left";
-    else player.facing = dy > 0 ? "down" : "up";
-}
 
 function drawMap() {
     const startCol = Math.floor(camera.x / TILE_SIZE);
@@ -345,7 +328,13 @@ function drawMap() {
             if (!def || !def.draw) continue;
             const sx = c * TILE_SIZE - camera.x;
             const sy = r * TILE_SIZE - camera.y;
-            def.draw(ctx, sx, sy, c, r);
+            try {
+                def.draw(ctx, sx, sy, c, r);
+            } catch (err) {
+                //never let one broken tile blank out the rest of the map
+                ctx.fillStyle = "#302a26";
+                ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
+            }
         }
     }
 }
@@ -397,20 +386,25 @@ function drawDebug(fps) {
 //game loop
 let lastTime = performance.now();
 let fps = 0;
+let consecutiveFrameErrors = 0;
 
 function tick(now) {
     const dt = Math.min((now - lastTime) / 1000, 0.05);
     lastTime = now;
     fps = 1 / Math.max(dt, 0.0001);
 
-    if (typeof updateHitStop === "function" && updateHitStop(dt)) {
-        render();
-        requestAnimationFrame(tick);
-        return;
+    try {
+        if (typeof updateHitStop === "function" && updateHitStop(dt)) {
+            render();
+        } else {
+            update(dt);
+            render();
+        }
+        consecutiveFrameErrors = 0;
+    } catch (err) {
+        consecutiveFrameErrors++;
+        console.error("Thornwake: frame error (" + consecutiveFrameErrors + " in a row):", err);
     }
-
-    update(dt);
-    render();
 
     requestAnimationFrame(tick);
 }
@@ -422,7 +416,6 @@ function update(dt) {
         const { dx, dy } = readMovementInput();
         moveWithCollision(map, player, dx * player.speed * dt, dy * player.speed * dt);
         updateCamera();
-        updateFacingToCursor();
     }
     if (UI.gameStarted && !menuOpen && typeof updateWorldPickups === "function") updateWorldPickups(dt);
     if (UI.gameStarted && typeof updateNPCs === "function") updateNPCs(dt);
