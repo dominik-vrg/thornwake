@@ -293,7 +293,6 @@ function damagePlayer(amount) {
 function respawnPlayer() {
     if (typeof triggerGameOver === "function") { triggerGameOver(); return; }
 
-
     showToast("You were overwhelmed by the thorns... you wake up back near where you started.");
     player.x = map.spawn.x * TILE_SIZE + 4;
     player.y = map.spawn.y * TILE_SIZE + 4;

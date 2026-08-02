@@ -28,6 +28,9 @@ const boss = {
     path: [],
     pathIndex: 0,
     pathTimer: 0,
+    path: [],
+    pathIndex: 0,
+    pathTimer: 0,
 };
 
 const BOSS_MOVE_SPEED = 72;
@@ -52,6 +55,9 @@ function resetBossEncounter() {
     boss.stateTimer = 0;
     boss.projectiles = [];
     boss.adds = [];
+    boss.path = [];
+    boss.pathIndex = 0;
+    boss.pathTimer = 0;
     boss.path = [];
     boss.pathIndex = 0;
     boss.pathTimer = 0;
@@ -122,7 +128,16 @@ function updateBoss(dt) {
     if (boss.contactTimer > 0) boss.contactTimer -= dt;
     if (rectsOverlap(boss, player) && boss.contactTimer <= 0) {
         damagePlayer(Math.round(BOSS_DEF.contactDamage * getDifficultyMods().enemyDamageMult * levelScalingMult()));
+        damagePlayer(Math.round(BOSS_DEF.contactDamage * getDifficultyMods().enemyDamageMult * levelScalingMult()));
         boss.contactTimer = 0.5;
+    }
+
+    if (boss.state === "cooldown" || boss.state === "telegraph") {
+        const bcx = boss.x + boss.w / 2, bcy = boss.y + boss.h / 2;
+        const pcx = player.x + player.w / 2, pcy = player.y + player.h / 2;
+        if (Math.hypot(pcx - bcx, pcy - bcy) > BOSS_STOP_DISTANCE) {
+            runPathTowards(boss, dt, toTile(player.x, player.y, player.w, player.h), BOSS_MOVE_SPEED);
+        }
     }
 
     boss.stateTimer -= dt;
@@ -200,6 +215,7 @@ function updateBossAdds(dt) {
         add.x += (dx / dist) * step;
         add.y += (dy / dist) * step;
 
+        if (rectsOverlap(add, player)) damagePlayer(Math.round(4 * getDifficultyMods().enemyDamageMult * levelScalingMult()));
         if (rectsOverlap(add, player)) damagePlayer(Math.round(4 * getDifficultyMods().enemyDamageMult * levelScalingMult()));
     }
 }

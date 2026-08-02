@@ -303,11 +303,7 @@ function readMovementInput() {
         const inv = 1 / Math.sqrt(2);
         dx *= inv; dy *= inv;
     }
-    if (dy < 0) player.facing = "up";
-    else if (dy > 0) player.facing = "down";
-    else if (dx < 0) player.facing = "left";
-    else if (dx > 0) player.facing = "right";
-    
+
     return { dx, dy };
 }
 
