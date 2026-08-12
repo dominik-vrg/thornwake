@@ -421,7 +421,6 @@ function drawHud(ctx) {
 //toast notification
 const toastEl = document.getElementById("pickupToast");
 const MAX_TOASTS = 6;
-const MAX_TOASTS = 6;
 
 function showToast(msg) {
     const el = document.createElement("div");
